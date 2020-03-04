@@ -1,0 +1,52 @@
+import sys
+import requests
+import time
+import json
+import telepot
+from telepot.loop import MessageLoop
+
+def handle(msg):
+    content_type, chat_type, chat_id = telepot.glance(msg)
+    print(content_type, chat_type, chat_id)
+    bot.sendMessage(chat_id, "Wasap, bitch. Отправь свою геолокацию и я скажу тебя стоит ли сегодня бухать на улице")
+    if content_type == 'location':
+        lat = msg["location"]["latitude"]
+        long = msg["location"]["longitude"]
+        data = get_weather(lat,long)
+        avgtem = 0
+        n = 0
+        for date, temp in data:
+            answer = ''
+            answer += f'{date} - temp {temp} in celsius\n'
+            bot.sendMessage(chat_id, answer)
+            n += 1
+            avgtem += temp
+        avgtem = avgtem // n
+        if avgtem < 0 :
+            bot.sendMessage(chat_id, "Холодновато. Думаю не стоит на улице. Лучше найди хату")
+        else:
+            bot.sendMessage(chat_id, "Жарень! Иди скорее бухать")
+
+
+
+
+
+def get_weather(lat,long):
+    response = requests.get(f'https://api.weather.yandex.ru/v1/forecast?lat={lat}&lon={long}', headers= {'X-Yandex-API-Key': 'e6dcb2f6-e5c4-4a6d-b857-13d259a64dbd'})
+    forecasts = response.json()['forecasts']
+    result = []
+    for forecast in forecasts:
+        date = forecast["date"]
+        temp = forecast['parts']['day']['temp_avg']
+        result.append((date, temp))
+    return result
+
+if __name__ == '__main__':
+    TOKEN = '1127342156:AAGvmOTO5g3A1zSY0BexVS0rBbZyzJsAnbA'
+    bot = telepot.Bot(TOKEN)
+    MessageLoop(bot, handle).run_as_thread()
+    print ('Listening ...')
+
+    # Keep the program running.
+    while 1:
+        time.sleep(10)
